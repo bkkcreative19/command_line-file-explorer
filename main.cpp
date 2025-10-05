@@ -122,7 +122,7 @@ int main(){
             //     mvprintw(3, 20, "You have selected the file: %s", options[selected-1].path().filename().c_str());
             // }
 			
-			// mvprintw(5, 30, "Press any key to return...");
+			// mvprintw(5, 30, "Presss any key to return...");
 			// getch();
 		}
 	}
