@@ -1,5 +1,7 @@
 CXX = g++
 
+CXXFLAGS = -g
+
 TARGET = ./main
 
 TARGET_DEL = main.exe
