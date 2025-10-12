@@ -18,6 +18,7 @@ public:
         cbreak();
         noecho();
         curs_set(0);
+        scrollok(stdscr, TRUE);
         keypad(stdscr, TRUE);
     }
 
@@ -39,9 +40,12 @@ public:
             }
             else if (selected == 0)
             {
-                FileSystemItem parentItem{std::filesystem::directory_entry(directoryContents[selected].entry.path().parent_path().parent_path()), directoryContents[selected].entry.path().parent_path().parent_path()};
-                currentItem = parentItem;
-                handlePopulateContent();
+                auto parentPath = currentItem.entry.path().parent_path();
+                if (!parentPath.empty())
+                {
+                    currentItem = {std::filesystem::directory_entry(parentPath), parentPath.string()};
+                    handlePopulateContent();
+                }
             }
             selected = 0;
             break;
@@ -53,13 +57,13 @@ public:
 
     void handleSelectedItem(int key)
     {
-        if (key == KEY_DOWN && selected < directoryContents.size())
+        if (key == KEY_DOWN)
         {
-            selected++;
+            selected = (selected + 1) % (directoryContents.size() + 1);
         }
-        else if (key == KEY_UP && selected > 0)
+        else if (key == KEY_UP)
         {
-            selected--;
+            selected = (selected - 1 + directoryContents.size() + 1) % (directoryContents.size() + 1);
         }
     }
 
@@ -70,26 +74,15 @@ public:
 
         if (std::filesystem::exists(currentItem.entry.path()) && std::filesystem::is_directory(currentItem.entry.path()))
         {
-            if (directoryContents.size() > 0)
+            for (const auto &entry : std::filesystem::directory_iterator(currentItem.entry.path()))
             {
-                for (const auto &entry : std::filesystem::directory_iterator(currentItem.entry.path()))
+                std::string name = entry.path().filename().string();
+                directoryContents.push_back({entry, name});
+                maxOptionLength = std::max<int>(maxOptionLength, name.length());
+
+                if ((std::filesystem::is_directory(entry.path())) || (name[0] == '.'))
                 {
-                    directoryContents.push_back({entry, entry.path().filename().string()});
-                    if (entry.path().filename().string().length() > maxOptionLength)
-                    {
-                        maxOptionLength = entry.path().filename().string().length();
-                    }
-                }
-            }
-            else
-            {
-                for (const auto &entry : std::filesystem::directory_iterator(currentItem.entry.path()))
-                {
-                    directoryContents.push_back({entry, entry.path().filename().string()});
-                    if (entry.path().filename().string().length() > maxOptionLength)
-                    {
-                        maxOptionLength = entry.path().filename().string().length();
-                    }
+                    maxOptionLength++;
                 }
             }
         }
@@ -97,16 +90,17 @@ public:
 
     void displayContent()
     {
-        mvprintw(index, 0, "/..");
+        int index{0};
+        mvprintw(index++, 0, "/..");
         for (const auto &option : directoryContents)
         {
             if (std::filesystem::is_directory(option.entry.path()))
             {
-                mvprintw(index + 1, 0, "/%s", option.path.c_str());
+                mvprintw(index, 0, "/%s", option.path.c_str());
             }
             else
             {
-                mvprintw(index + 1, 0, "%s", option.path.c_str());
+                mvprintw(index, 0, "%s", option.path.c_str());
             }
 
             index++;
@@ -128,11 +122,6 @@ public:
         m_input = input;
     }
 
-    void resetIndex()
-    {
-        index = 0;
-    }
-
     ~FileExplorer()
     {
         endwin();
@@ -142,7 +131,6 @@ private:
     FileSystemItem currentItem{std::filesystem::directory_entry(std::filesystem::current_path()), std::filesystem::current_path()};
     int maxOptionLength{};
     int m_input{};
-    int index{};
     int selected{};
     std::vector<FileSystemItem> directoryContents{};
 };
@@ -156,8 +144,6 @@ int main()
     while (fileExplorer.getInput() != 'q')
     {
         clear();
-
-        fileExplorer.resetIndex();
         fileExplorer.displayContent();
 
         refresh();
@@ -166,6 +152,4 @@ int main()
 
         fileExplorer.handleKeyboardInput();
     }
-
-    endwin();
 }
