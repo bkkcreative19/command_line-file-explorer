@@ -10,7 +10,7 @@ SRCS = main.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 
-all: $(TARGET) run
+# all: $(TARGET) run
 
 $(TARGET): $(OBJS)
 	@$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) -lncurses
@@ -18,8 +18,8 @@ $(TARGET): $(OBJS)
 %.o: %.cpp
 	@$(CXX) $(CXXFLAGS) -c $< -o $@ 
 
-run: $(TARGET)
-	@$(TARGET)
+# run: $(TARGET)
+# 	@$(TARGET)
 
 # Clean rule to remove generated files
 clean:

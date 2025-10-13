@@ -9,6 +9,13 @@ struct FileSystemItem
     std::string path;
 };
 
+int getVisibleRows()
+{
+    int rows, cols;
+    getmaxyx(stdscr, rows, cols);
+    return rows;
+}
+
 class FileExplorer
 {
 public:
@@ -57,13 +64,26 @@ public:
 
     void handleSelectedItem(int key)
     {
+        int totalItems = directoryContents.size() + 1;
+
         if (key == KEY_DOWN)
         {
-            selected = (selected + 1) % (directoryContents.size() + 1);
+            selected = (selected + 1) % totalItems;
         }
         else if (key == KEY_UP)
         {
-            selected = (selected - 1 + directoryContents.size() + 1) % (directoryContents.size() + 1);
+            selected = (selected - 1 + totalItems) % totalItems;
+        }
+
+        int visibleRows = getVisibleRows();
+
+        if (selected < m_offset)
+        {
+            m_offset = selected;
+        }
+        else if (selected >= m_offset + visibleRows)
+        {
+            m_offset = selected - visibleRows + 1;
         }
     }
 
@@ -90,25 +110,30 @@ public:
 
     void displayContent()
     {
-        int index{0};
-        mvprintw(index++, 0, "/..");
-        for (const auto &option : directoryContents)
-        {
-            if (std::filesystem::is_directory(option.entry.path()))
-            {
-                mvprintw(index, 0, "/%s", option.path.c_str());
-            }
-            else
-            {
-                mvprintw(index, 0, "%s", option.path.c_str());
-            }
+        int visibleRows = getVisibleRows();
 
-            index++;
+        int index{0};
+        // mvprintw(index++, 0, "/..");
+        if (m_offset == 0)
+        {
+            mvprintw(index++, 0, "/..");
+        }
+        for (int i = m_offset == 0 ? 0 : m_offset - 1;
+             i < directoryContents.size() && index < visibleRows;
+             i++, index++)
+        {
+            auto &item = directoryContents[i];
+            if (std::filesystem::is_directory(item.entry.path()))
+                mvprintw(index, 0, "/%s", item.path.c_str());
+            else
+                mvprintw(index, 0, "%s", item.path.c_str());
         }
 
-        if (selected >= 0 && selected < directoryContents.size() + 1)
+        // Highlight selected item
+        int highlightRow = selected - m_offset;
+        if (highlightRow >= 0 && highlightRow < visibleRows)
         {
-            mvchgat(selected, 0, maxOptionLength, A_STANDOUT, 1, NULL);
+            mvchgat(highlightRow, 0, maxOptionLength, A_STANDOUT, 1, NULL);
         }
     }
 
@@ -132,6 +157,7 @@ private:
     int maxOptionLength{};
     int m_input{};
     int selected{};
+    int m_offset{};
     std::vector<FileSystemItem> directoryContents{};
 };
 
